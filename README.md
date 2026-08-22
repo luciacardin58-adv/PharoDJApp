@@ -5,6 +5,10 @@ displays, transport controls and a crate browser, built on Bloc/Toplo for the
 user interface and Faust DSP through Phausto for audio.
 
 Google Summer of Code 2026 project with the Pharo Association.
+Google Summer of Code 2026 project with the Pharo Association.
+
+📄 **[GSoC 2026 final submission report](GSOC-2026.md)** — what was built, whatworks, what is still missing, with links to every repository and commit range.
+
 
 ## Installation
 
