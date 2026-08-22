@@ -16,16 +16,16 @@ BaselineOfDJApp >> baseline: spec [
 	spec for: #common do: [ :s |
 		s
 			baseline: 'CoypuIDE'
-			with: [ s repository: 'github://luciacardin58-adv/CoypuIDE:master' ].
+			with: [ s repository: 'github://luciacardin58-adv/CoypuIDE:main' ].
 		s
 			baseline: 'Phausto'
 			with: [ s repository: 'github://luciacardin58-adv/phausto:main' ].
 		s
 			baseline: 'DJAudioFormats'
-			with: [ s repository: 'github://luciacardin58-adv/DJAudio-Formats:master' ].
+			with: [ s repository: 'github://luciacardin58-adv/DJAudio-Formats:main' ].
 		s
 			baseline: 'DJDeck'
-			with: [ s repository: 'github://luciacardin58-adv/DJDeck:master' ].
+			with: [ s repository: 'github://luciacardin58-adv/DJDeck:main' ].
 		s
 			baseline: 'DjBlocUI'
 			with: [ s repository: 'github://<user>/DjBlocUI:main' ].
