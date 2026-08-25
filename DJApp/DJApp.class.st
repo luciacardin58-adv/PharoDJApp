@@ -256,6 +256,7 @@ DJApp >> loadTrack: aPath onDeck: aSymbol [
 { #category : 'host space - displaying' }
 DJApp >> openSpace [
 
+	space ifNotNil: [ ^ self ].
 	space := consoleElement inSpace.
 	space extent: DJConsoleElement defaultExtent.
 	space title: 'Pharo DJ'.
@@ -321,7 +322,12 @@ DJApp >> start [
 	self buildAudio.
 	self buildUI.
 	self connectUI.
-	self openSpace
+	self buildUI.
+	self connectUI.
+	self openSpace.
+	
+	self openSpace.
+	consoleElement browser rootFolder: FileLocator home asFileReference.
 ]
 
 { #category : 'running' }
