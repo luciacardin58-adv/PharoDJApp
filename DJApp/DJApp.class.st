@@ -151,6 +151,16 @@ DJApp >> connectTrackLoading [
 ]
 
 { #category : 'connecting' }
+DJApp >> connectTransport: anElement toDeck: aSymbol [
+
+	anElement playAction: [ :playing |
+		self deckAt: aSymbol ifPresent: [ :deck |
+			playing
+				ifTrue: [ deck play ]
+				ifFalse: [ deck pause ] ] ]
+]
+
+{ #category : 'connecting' }
 DJApp >> connectUI [
 
 	self
