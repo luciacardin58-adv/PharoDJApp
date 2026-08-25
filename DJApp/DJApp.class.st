@@ -27,7 +27,8 @@ Class {
 		'space',
 		'deckA',
 		'console',
-		'deckB'
+		'deckB',
+		'decks'
 	],
 	#category : 'DJApp',
 	#package : 'DJApp'
@@ -186,6 +187,12 @@ DJApp >> deckA [
 ]
 
 { #category : 'accessing' }
+DJApp >> deckAt: aSymbol [
+
+	^ decks at: aSymbol ifAbsent: [ nil ]
+]
+
+{ #category : 'accessing' }
 DJApp >> deckAt: aSymbol ifPresent: aBlock [
 "A deck does not exist until a track is loaded onto it, so every callback fires against nil until then."
 
@@ -195,9 +202,7 @@ DJApp >> deckAt: aSymbol ifPresent: aBlock [
 { #category : 'accessing' }
 DJApp >> deckAt: aSymbol put: aDeck [
 
-	aSymbol = #A
-		ifTrue: [ deckA := aDeck ]
-		ifFalse: [ deckB := aDeck ]
+	^ decks at: aSymbol put: aDeck
 ]
 
 { #category : 'accessing' }
@@ -206,10 +211,16 @@ DJApp >> deckB [
 	^ deckB
 ]
 
+{ #category : 'accessing' }
+DJApp >> decks [ 
+^ decks
+]
+
 { #category : 'initialization' }
 DJApp >> initialize [
+
 	super initialize.
-	
+	decks := Dictionary new
 ]
 
 { #category : 'loading' }
@@ -271,10 +282,8 @@ DJApp >> pushWidgetsFrom: aStrip to: aDeckDsp [
 { #category : 'releasing' }
 DJApp >> releaseAudio [
 
-	deckA ifNotNil: [ deckA destroy ].
-	deckB ifNotNil: [ deckB destroy ].
-	deckA := nil.
-	deckB := nil
+	decks valuesDo: [ :each | each destroy ].
+	decks removeAll
 ]
 
 { #category : 'initialization' }
