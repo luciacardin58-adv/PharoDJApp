@@ -139,6 +139,17 @@ DJApp >> connectTempo: aDeckElement to: aDeckDsp [
 ]
 
 { #category : 'connecting' }
+DJApp >> connectTrackLoading [
+
+	consoleElement trackLoadedAction: [ :element :path |
+		self
+			loadTrack: path
+			onDeck: (element == consoleElement leftDeck
+					 ifTrue: [ #A ]
+					 ifFalse: [ #B ]) ]
+]
+
+{ #category : 'connecting' }
 DJApp >> connectUI [
 
 	self
@@ -175,6 +186,21 @@ DJApp >> deckA [
 ]
 
 { #category : 'accessing' }
+DJApp >> deckAt: aSymbol ifPresent: aBlock [
+"A deck does not exist until a track is loaded onto it, so every callback fires against nil until then."
+
+	^ (self deckAt: aSymbol) ifNotNil: aBlock
+]
+
+{ #category : 'accessing' }
+DJApp >> deckAt: aSymbol put: aDeck [
+
+	aSymbol = #A
+		ifTrue: [ deckA := aDeck ]
+		ifFalse: [ deckB := aDeck ]
+]
+
+{ #category : 'accessing' }
 DJApp >> deckB [
 
 	^ deckB
@@ -186,6 +212,19 @@ DJApp >> initialize [
 	
 ]
 
+{ #category : 'loading' }
+DJApp >> loadTrack: aPath onDeck: aSymbol [
+	"New first, then destroy — a failed construction leaves the previous
+	 track playing rather than silence."
+
+	| old new |
+	old := self deckAt: aSymbol.
+	new := DJDeck onDeck: aSymbol fromFilePath: aPath.
+	self deckAt: aSymbol put: new.
+	old ifNotNil: [ :each | each destroy ].
+	self pushStateTo: aSymbol
+]
+
 { #category : 'host space - displaying' }
 DJApp >> openSpace [
 
@@ -193,6 +232,18 @@ DJApp >> openSpace [
 	space extent: DJConsoleElement defaultExtent.
 	space title: 'Pharo DJ'.
 	space show
+]
+
+{ #category : 'loading' }
+DJApp >> pushStateTo: aSymbol [
+"A new deck boots at Phausto's defaults — shelves at +3 dB, uLevel 0.5, filters open: while the widgets stay where the DJ left them. Every control has to be restated or the load silently resets the sound."
+
+	| deck strip |
+	deck := self deckAt: aSymbol.
+	strip := self stripAt: aSymbol.
+	self setShelfCornersFor: deck.
+	self pushWidgetsFrom: strip to: deck.
+	self pushCrossfadeTo: deck forDeck: aSymbol
 ]
 
 { #category : 'initialization' }
