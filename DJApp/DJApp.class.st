@@ -105,28 +105,28 @@ DJApp >> connectDeck: aDeck element: anElement strip: aStrip [
 ]
 
 { #category : 'connecting' }
-DJApp >> connectStrip: aStrip to: aDeckDsp [
+DJApp >> connectStrip: aStrip to: aDeck [
+	"The channel fader goes through the deck, not straight at 'ULevel' —
+	 the crossfader writes the same address and the two have to multiply."
 
 	| eq |
 	eq := aStrip eqCOntrols.
 	aStrip channelFader callBack: [ :each |
-		aDeckDsp dsp
-			setValue: aStrip channelFader gain
-			parameter: aDeckDsp prefix , 'ULevel' ].
+		aDeck channelGain: aStrip channelFader gain ].
 	eq lowKnob callBack: [ :each |
-		aDeckDsp dsp
-			setValue: (self decibelsFrom: eq lowKnob value)
-			parameter: aDeckDsp prefix , 'LowLevel' ].
+		aDeck dsp
+			setValue: (self decibelsFrom: eq lowKnob currentValue)
+			parameter: aDeck prefix , 'LowLevel' ].
 	eq midKnob callBack: [ :each |
-		aDeckDsp dsp
-			setValue: (self decibelsFrom: eq midKnob value)
-			parameter: aDeckDsp prefix , 'MidLfx' ].
+		aDeck dsp
+			setValue: (self decibelsFrom: eq midKnob currentValue)
+			parameter: aDeck prefix , 'MidLfx' ].
 	eq highKnob callBack: [ :each |
-		aDeckDsp dsp
-			setValue: (self decibelsFrom: eq highKnob value)
-			parameter: aDeckDsp prefix , 'HighLevel' ].
+		aDeck dsp
+			setValue: (self decibelsFrom: eq highKnob currentValue)
+			parameter: aDeck prefix , 'HighLevel' ].
 	aStrip filterKnob callBack: [ :each |
-		self applyFilter: aStrip filterKnob value to: aDeckDsp ]
+		self applyFilter: aStrip filterKnob currentValue to: aDeck ]
 ]
 
 { #category : 'connecting' }
@@ -226,6 +226,13 @@ DJApp >> decks [
 ^ decks
 ]
 
+{ #category : 'accessing' }
+DJApp >> defaultTrackPath [
+
+	^ FileLocator imageDirectory asAbsolute pathString
+	  , '/TurboSamples/blip/LAZ_R900.wav'
+]
+
 { #category : 'initialization' }
 DJApp >> initialize [
 
@@ -274,19 +281,17 @@ DJApp >> pushWidgetsFrom: aStrip to: aDeckDsp [
 
 	| eq |
 	eq := aStrip eqCOntrols.
+	aDeckDsp channelGain: aStrip channelFader gain.
 	aDeckDsp dsp
-		setValue: aStrip channelFader gain
-		parameter: aDeckDsp prefix , 'ULevel'.
-	aDeckDsp dsp
-		setValue: (self decibelsFrom: eq lowKnob value)
+		setValue: (self decibelsFrom: eq lowKnob currentValue)
 		parameter: aDeckDsp prefix , 'LowLevel'.
 	aDeckDsp dsp
-		setValue: (self decibelsFrom: eq midKnob value)
+		setValue: (self decibelsFrom: eq midKnob currentValue)
 		parameter: aDeckDsp prefix , 'MidLfx'.
 	aDeckDsp dsp
-		setValue: (self decibelsFrom: eq highKnob value)
+		setValue: (self decibelsFrom: eq highKnob currentValue)
 		parameter: aDeckDsp prefix , 'HighLevel'.
-	self applyFilter: aStrip filterKnob value to: aDeckDsp
+	self applyFilter: aStrip filterKnob currentValue to: aDeckDsp
 ]
 
 { #category : 'releasing' }
