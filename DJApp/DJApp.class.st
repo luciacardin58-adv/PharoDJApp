@@ -213,6 +213,15 @@ DJApp >> deckAt: aSymbol put: aDeck [
 ]
 
 { #category : 'accessing' }
+DJApp >> deckElementAt: aSymbol [
+	"#A is the left deck element, #B the right — the sibling of stripAt:."
+
+	^ aSymbol = #A
+		  ifTrue: [ consoleElement leftDeck ]
+		  ifFalse: [ consoleElement rightDeck ]
+]
+
+{ #category : 'accessing' }
 DJApp >> decks [ 
 ^ decks
 ]
