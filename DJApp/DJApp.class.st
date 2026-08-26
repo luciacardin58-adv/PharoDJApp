@@ -25,9 +25,7 @@ Class {
 	#instVars : [
 		'consoleElement',
 		'space',
-		'deckA',
 		'console',
-		'deckB',
 		'decks'
 	],
 	#category : 'DJApp',
@@ -64,8 +62,8 @@ DJApp >> applyFilter: aKnobValue to: aDeckDsp [
 { #category : 'building' }
 DJApp >> buildAudio [
 
-	deckA := DJDeck onDeck: #A fromFilePath: self defaultTrackPath.
-	deckB := DJDeck onDeck: #B fromFilePath: self defaultTrackPath
+	self deckAt: #A put: (DJDeck onDeck: #A fromFilePath: self defaultTrackPath).
+	self deckAt: #B put: (DJDeck onDeck: #B fromFilePath: self defaultTrackPath)
 ]
 
 { #category : 'building' }
@@ -84,59 +82,66 @@ DJApp >> closeSpace [
 
 { #category : 'connecting' }
 DJApp >> connectCrossfader [
-"Left is full A, right is full B. Linear, so the centre sums two tracks at half each;  a cut fader, not constant power."
+"Left is full A, right is full B. Linear, so the centre sums two tracks at half each; a cut fader, not constant power."
 
 	| fader |
 	fader := consoleElement mixer crossfader.
 	fader callBack: [ :each |
 		| t |
 		t := fader value + 100 / 200.
-		deckA crossfadeGain: 1 - t.
-		deckB crossfadeGain: t ]
+		self deckAt: #A ifPresent: [ :deck | deck crossfadeGain: 1 - t ].
+		self deckAt: #B ifPresent: [ :deck | deck crossfadeGain: t ] ]
+]
+
+{ #category : 'building' }
+DJApp >> connectDeck: aSymbol element: anElement strip: aStrip [
+
+	self connectTempo: anElement toDeck: aSymbol.
+	self connectStrip: aStrip toDeck: aSymbol.
+	self connectTransport: anElement toDeck: aSymbol.
+	self deckAt: aSymbol ifPresent: [ :deck |
+		self setShelfCornersFor: deck.
+		self pushWidgetsFrom: aStrip to: deck ]
 ]
 
 { #category : 'connecting' }
-DJApp >> connectDeck: aDeck element: anElement strip: aStrip [
-
-	self connectTempo: anElement to: aDeck.
-	self connectStrip: aStrip to: aDeck.
-	self setShelfCornersFor: aDeck.
-	self pushWidgetsFrom: aStrip to: aDeck
-]
-
-{ #category : 'connecting' }
-DJApp >> connectStrip: aStrip to: aDeck [
-	"The channel fader goes through the deck, not straight at 'ULevel' —
-	 the crossfader writes the same address and the two have to multiply."
+DJApp >> connectStrip: aStrip toDeck: aSymbol [
+"The channel fader goes through the deck, not straight at 'ULevel' — the crossfader writes the same address and the two have to multiply."
 
 	| eq |
 	eq := aStrip eqCOntrols.
 	aStrip channelFader callBack: [ :each |
-		aDeck channelGain: aStrip channelFader gain ].
+		self deckAt: aSymbol ifPresent: [ :deck |
+			deck channelGain: aStrip channelFader gain ] ].
 	eq lowKnob callBack: [ :each |
-		aDeck dsp
-			setValue: (self decibelsFrom: eq lowKnob currentValue)
-			parameter: aDeck prefix , 'LowLevel' ].
+		self deckAt: aSymbol ifPresent: [ :deck |
+			deck dsp
+				setValue: (self decibelsFrom: eq lowKnob currentValue)
+				parameter: deck prefix , 'LowLevel' ] ].
 	eq midKnob callBack: [ :each |
-		aDeck dsp
-			setValue: (self decibelsFrom: eq midKnob currentValue)
-			parameter: aDeck prefix , 'MidLfx' ].
+		self deckAt: aSymbol ifPresent: [ :deck |
+			deck dsp
+				setValue: (self decibelsFrom: eq midKnob currentValue)
+				parameter: deck prefix , 'MidLfx' ] ].
 	eq highKnob callBack: [ :each |
-		aDeck dsp
-			setValue: (self decibelsFrom: eq highKnob currentValue)
-			parameter: aDeck prefix , 'HighLevel' ].
+		self deckAt: aSymbol ifPresent: [ :deck |
+			deck dsp
+				setValue: (self decibelsFrom: eq highKnob currentValue)
+				parameter: deck prefix , 'HighLevel' ] ].
 	aStrip filterKnob callBack: [ :each |
-		self applyFilter: aStrip filterKnob currentValue to: aDeck ]
+		self deckAt: aSymbol ifPresent: [ :deck |
+			self applyFilter: aStrip filterKnob currentValue to: deck ] ]
 ]
 
 { #category : 'connecting' }
-DJApp >> connectTempo: aDeckElement to: aDeckDsp [
-"snappedValue, not value: the fader travel quantises to pixels and centre detent has to read exactly 0."
+DJApp >> connectTempo: aDeckElement toDeck: aSymbol [
+"snappedValue, not value: the fader travel quantises to pixels and the centre detent has to read exactly 0."
 
 	aDeckElement tempoFader callBack: [ :each |
-			aDeckDsp dsp
+		self deckAt: aSymbol ifPresent: [ :deck |
+			deck dsp
 				setValue: aDeckElement tempoFader snappedValue
-				parameter: aDeckDsp prefix , 'Speed' ]
+				parameter: deck prefix , 'Speed' ] ]
 ]
 
 { #category : 'connecting' }
@@ -164,14 +169,15 @@ DJApp >> connectTransport: anElement toDeck: aSymbol [
 DJApp >> connectUI [
 
 	self
-		connectDeck: deckA
+		connectDeck: #A
 		element: consoleElement leftDeck
 		strip: consoleElement mixer leftStrip.
 	self
-		connectDeck: deckB
+		connectDeck: #B
 		element: consoleElement rightDeck
 		strip: consoleElement mixer rightStrip.
-	self connectCrossfader
+	self connectCrossfader.
+	self connectTrackLoading
 ]
 
 { #category : 'accessing' }
@@ -192,11 +198,6 @@ DJApp >> decibelsFrom: aKnobValue [
 ]
 
 { #category : 'accessing' }
-DJApp >> deckA [ 
-^ deckA 
-]
-
-{ #category : 'accessing' }
 DJApp >> deckAt: aSymbol [
 
 	^ decks at: aSymbol ifAbsent: [ nil ]
@@ -213,12 +214,6 @@ DJApp >> deckAt: aSymbol ifPresent: aBlock [
 DJApp >> deckAt: aSymbol put: aDeck [
 
 	^ decks at: aSymbol put: aDeck
-]
-
-{ #category : 'accessing' }
-DJApp >> deckB [
-
-	^ deckB
 ]
 
 { #category : 'accessing' }
@@ -317,17 +312,14 @@ DJApp >> space [
 ^ space 
 ]
 
-{ #category : 'running' }
+{ #category : 'accessing' }
 DJApp >> start [
+
 	self buildAudio.
 	self buildUI.
 	self connectUI.
-	self buildUI.
-	self connectUI.
 	self openSpace.
-	
-	self openSpace.
-	consoleElement browser rootFolder: FileLocator home asFileReference.
+	consoleElement browser rootFolder: FileLocator home asFileReference
 ]
 
 { #category : 'running' }
