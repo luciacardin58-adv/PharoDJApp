@@ -82,15 +82,13 @@ DJApp >> closeSpace [
 
 { #category : 'connecting' }
 DJApp >> connectCrossfader [
-"Left is full A, right is full B. Linear, so the centre sums two tracks at half each; a cut fader, not constant power."
+"Left is full A, right is full B. The element owns the curve — asking it for gainA/gainB keeps one definition instead of two that drift."
 
 	| fader |
 	fader := consoleElement mixer crossfader.
 	fader callBack: [ :each |
-		| t |
-		t := fader value + 100 / 200.
-		self deckAt: #A ifPresent: [ :deck | deck crossfadeGain: 1 - t ].
-		self deckAt: #B ifPresent: [ :deck | deck crossfadeGain: t ] ]
+		self deckAt: #A ifPresent: [ :deck | deck crossfadeGain: fader gainA ].
+		self deckAt: #B ifPresent: [ :deck | deck crossfadeGain: fader gainB ] ]
 ]
 
 { #category : 'building' }
@@ -167,17 +165,15 @@ DJApp >> connectTransport: anElement toDeck: aSymbol [
 
 { #category : 'connecting' }
 DJApp >> connectUI [
+	"Bisecting: transport, tempo and load. Strip and crossfader stay out
+	 until the filter mapping is settled."
 
-	self
-		connectDeck: #A
-		element: consoleElement leftDeck
-		strip: consoleElement mixer leftStrip.
-	self
-		connectDeck: #B
-		element: consoleElement rightDeck
-		strip: consoleElement mixer rightStrip.
-	self connectCrossfader.
-	self connectTrackLoading
+	self connectTransport: consoleElement leftDeck toDeck: #A.
+	self connectTransport: consoleElement rightDeck toDeck: #B.
+	self connectTempo: consoleElement leftDeck toDeck: #A.
+	self connectTempo: consoleElement rightDeck toDeck: #B.
+	self connectTrackLoading.
+	self connectCrossfader .
 ]
 
 { #category : 'accessing' }
@@ -258,22 +254,39 @@ DJApp >> openSpace [
 	space show
 ]
 
+{ #category : 'connecting' }
+DJApp >> pushCrossfadeTo: aDeck forDeck: aSymbol [
+"A new deck boots at crossfadeGain 1 and the crossfader has not moved,so nothing would tell it otherwise. Restate the fader's position or a load silently un-fades the deck."
+
+	| fader |
+	fader := consoleElement mixer crossfader.
+	aDeck crossfadeGain: (aSymbol = #A
+			 ifTrue: [ fader gainA ]
+			 ifFalse: [ fader gainB ])
+]
+
 { #category : 'loading' }
 DJApp >> pushStateTo: aSymbol [
-"A new deck boots at Phausto's defaults — shelves at +3 dB, uLevel 0.5, filters open: while the widgets stay where the DJ left them. Every control has to be restated or the load silently resets the sound."
+	"A new deck boots at Phausto's defaults while the widgets stay where the
+	 DJ left them. Tempo and crossfade only for now — the filter is still open
+	 at its compiled inits, and the strip is out of the loop."
 
-	| deck strip |
+	| deck fader |
 	deck := self deckAt: aSymbol.
-	strip := self stripAt: aSymbol.
-	self setShelfCornersFor: deck.
-	self pushWidgetsFrom: strip to: deck.
-	self pushCrossfadeTo: deck forDeck: aSymbol
+	fader := consoleElement mixer crossfader.
+	deck dsp
+		setValue: (self deckElementAt: aSymbol) tempoFader snappedValue
+		parameter: deck prefix , 'Speed'.
+	deck crossfadeGain: (aSymbol = #A
+			 ifTrue: [ fader gainA ]
+			 ifFalse: [ fader gainB ])
 ]
 
 { #category : 'initialization' }
 DJApp >> pushWidgetsFrom: aStrip to: aDeckDsp [
-	"The DSP boots with boosted shelves and uLevel 0.5, the widgets boot flat
-	 and open. Push once so the two agree before the first turn."
+	"The DSP boots with boosted shelves and uLevel 0.5, the widgets boot flat.
+	 Push once so the two agree before the first turn. The filter is left at
+	 its compiled inits — both ends open — until the bipolar mapping is settled."
 
 	| eq |
 	eq := aStrip eqCOntrols.
@@ -286,8 +299,7 @@ DJApp >> pushWidgetsFrom: aStrip to: aDeckDsp [
 		parameter: aDeckDsp prefix , 'MidLfx'.
 	aDeckDsp dsp
 		setValue: (self decibelsFrom: eq highKnob currentValue)
-		parameter: aDeckDsp prefix , 'HighLevel'.
-	self applyFilter: aStrip filterKnob currentValue to: aDeckDsp
+		parameter: aDeckDsp prefix , 'HighLevel'
 ]
 
 { #category : 'releasing' }
@@ -326,6 +338,15 @@ DJApp >> start [
 DJApp >> stop [
 	self closeSpace.
 	self releaseAudio
+]
+
+{ #category : 'accessing' }
+DJApp >> stripAt: aSymbol [
+"#A is the left strip, #B the right. The mixer names them by side; deck symbols are mine, so the mapping lives here."
+
+	^ aSymbol = #A
+		  ifTrue: [ consoleElement mixer leftStrip ]
+		  ifFalse: [ consoleElement mixer rightStrip ]
 ]
 
 { #category : 'api - converting' }
